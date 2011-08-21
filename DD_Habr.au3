@@ -46,7 +46,7 @@ EndFunc   ;==>Terminate
 
 
 Func _GetCornerCoords(ByRef $iX, ByRef $iY)                                ;получение координат угла поля
-	$fResult = _ImageSearch("D:\EvilTosha\DiamondDash\template.bmp", 0, $iX, $iY, 0x15)
+	$fResult = _ImageSearch("template.bmp", 0, $iX, $iY, 0x15)
 	If $fResult = 1 Then
 		$iX += 20
 		$iY += 20
