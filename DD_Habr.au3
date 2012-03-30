@@ -1,28 +1,28 @@
-#Include <Constants.au3>					;подключение всего необходимого
+#Include <Constants.au3>					
 #Include <WinAPIEx.au3>
 #Include <WindowsConstants.au3>
 #Include <ScreenCapture.au3>
 #Include <ImageSearch.au3>
 
 
-HotKeySet("{F2}", "_Start")       ;биндинг клавиш старта, паузы и завершения скрипта
+HotKeySet("{F2}", "_Start")                             ;bind start/pause/finish buttons for script
 HotKeySet("{F3}", "_Pause")
 HotKeySet("{F4}", "_Terminate")
 
 
-Global $iCornerX									;координаты левого верхнего угла игрового поля
-Global $iCornerY									;будут проинициализированны при старте
-Global $iNumRows = 9							;размеры игрового поля
+Global $iCornerX                                        ;up-left corner of game field coordinates 
+Global $iCornerY                                        ;will be initialized with start
+Global $iNumRows = 9                                    ;game field size
 Global $iNumCols = 10
-Global $iDeltaX = 10							;координаты пикселя внутри одного квадратика
-Global $iDeltaY = 4								;по цвету котоорого будет восстанавливаться цвет квадратика
-Global $iMouseSpeed = 1						;скорость мыши, 1 - максимум, 10 - стандартно
-Global $iStepSleep = 100						;задержка между кликами в миллисекундах
+Global $iDeltaX = 10                                    ;coordinates of pixel in cell
+Global $iDeltaY = 4                                     ;which will give cell its color
+Global $iMouseSpeed = 1                                 ;mouse speed; 1 - max, 10 - standard
+Global $iStepSleep = 100                                ;pause between clicks in ms
 
 
-Global $aiDiams[$iNumRows][$iNumCols]					;массив по которому будут определяться алмазы
-Global $afJustClicked[$iNumRows][$iNumCols]   ;хранит область последнего клика, чтобы уменьшить количество ошибок
-Global $fActive = False												;флаг активности скрипта
+Global $aiDiams[$iNumRows][$iNumCols]					;array for determine diamonds
+Global $afJustClicked[$iNumRows][$iNumCols]             ;array store last click area for reducing mistakes
+Global $fActive = False                                 ;script's active flag
 
 
 Func _Start()
@@ -31,7 +31,7 @@ Func _Start()
 			$aiDiams[$iRow][$iCol] = 0
 		Next
 	Next
-	If (_GetCornerCoords($iCornerX, $iCornerY)) Then  ;получение координат угла поля
+	If (_GetCornerCoords($iCornerX, $iCornerY)) Then    ;get corner's coordinates
 		$fActive = True
 	EndIf
 EndFunc
@@ -40,12 +40,12 @@ Func _Pause()
 	$fActive = False
 EndFunc
 
-Func _Terminate()									;функция завершения скрипта
+Func _Terminate()                                       
 	Exit 0
 EndFunc   ;==>Terminate
 
 
-Func _GetCornerCoords(ByRef $iX, ByRef $iY)                                ;получение координат угла поля
+Func _GetCornerCoords(ByRef $iX, ByRef $iY)                                
 	$fResult = _ImageSearch("template.bmp", 0, $iX, $iY, 0x15)
 	If $fResult = 1 Then
 		$iX += 20
@@ -57,44 +57,42 @@ Func _GetCornerCoords(ByRef $iX, ByRef $iY)                                ;полу
 	Return True
 EndFunc
 
-Func Div($iValue1, $iValue2)				;не знаю почему нету стандартной функции неполного частного,
-																	;пришлось реализовывать самому =)
+Func Div($iValue1, $iValue2)                                                ;there is no standard div function, so i implemented mine
 	Return ($iValue1 - Mod($iValue1, $iValue2)) / $iValue2
 EndFunc
 
-Func _GetCheckColor($iPixelColor)											;получение цвета квадратика по цвету пикселя в нем
+Func _GetCheckColor($iPixelColor)                                           ;get cell color from color of inner pixel
 	Local $Red = Div($iPixelColor, 0x10000)
 	Local $Green =  Mod(Div($iPixelColor, 0x100), 0x100)
 	Local $Blue = Mod($iPixelColor, 0x100)
-	Local $d = 0x10									;константа погрешности
-	;магические числа были подобраны руками. Почти =)
+	Local $d = 0x10                                                         ;const for imprecision
+	;some magic numbers, obtained from experiments
 	Select
 		Case $Red > 0x90 - $d And $Green < 0x70 + $d And $Blue < 0x70 + $d
-			Return 1									;красный
+			Return 1									;red
 		Case $Red < 0x50 + $d And $Green > 0x90 - $d And $Blue < 0x50 + $d
-			Return 2									;зеленый
+			Return 2									;green
 		Case $Red < 0x50 + $d And $Green < 0x70 + $d And $Blue > 0x90 - $d
-			Return 3									;синий
+			Return 3									;blue
 		Case $Red > 0xA0 - $d And $Green > 0xA0 - $d And $Blue < 0x30 + $d
-			Return 4									;желтый
+			Return 4									;yellow
 		Case $Red > 0x70 - $d And $Green < 0x70 + $d And $Blue > 0x90 - $d
-			Return 5									;фиолетовый
+			Return 5									;purple
 		Case Else
-			Return 0									;неопределенный цвет
+			Return 0									;indefinite color
 	EndSelect
 EndFunc
 
-Func _IsWhite($iPixelColor)												;проверка пикселя на белый цвет
-																									;используется для выявления области недавнего взрыва
+Func _IsWhite($iPixelColor)                                                 ;white-color cell check, used for determine explosion
 	Local $Red = Div($iPixelColor, 0x10000)
 	Local $Green =  Mod(Div($iPixelColor, 0x100), 0x100)
 	Local $Blue = Mod($iPixelColor, 0x100)
 	Return ($Red > 0xFA And $Green > 0xFA And $Blue > 0xFA)
 EndFunc
 
-Func _GetField(ByRef $aiField)									;получение массива цветов поля
-	;получение BitMap-снимка экрана с помощью WinAPI
-	Local $hWnd = WinGetHandle("Игры Google+ - Google Chrome")
+Func _GetField(ByRef $aiField)									            ;get cell colors
+	;get BitMap-image of screen using WinAPI
+	Local $hWnd = WinGetHandle("Игры Google+ - Google Chrome")              ;used site title in browser
 	Local $Size = WinGetClientSize($hWnd)
 	Local $hDC = _WinAPI_GetDC($hWnd)
 	Local $hMemDC = _WinAPI_CreateCompatibleDC($hDC)
@@ -109,9 +107,9 @@ Func _GetField(ByRef $aiField)									;получение массива цветов поля
 	_WinAPI_GetBitmapBits($hBitmap, 4 * $L, DllStructGetPtr($tBits))
 
 	For $iCol = 0 To $iNumCols - 1
-		Local $fOverExplosion = False							;флаг взрыва в данной колонке
+		Local $fOverExplosion = False							            
 		For $iRow = $iNumRows - 1 to 0 Step -1
-			;проверка на взрыв
+			;explosion checkout
 			Local $iX = 25 + ($iCol * 40) + $iCornerX
 			Local $iY = 25 + ($iRow * 40) + $iCornerY
 			Local $iPixelColor = Mod(DllStructGetData($tBits, 1, $iY * $Size[0] + $iX), 0x1000000)
@@ -121,7 +119,7 @@ Func _GetField(ByRef $aiField)									;получение массива цветов поля
 			If $fOverExplosion Then
 				$aiField[$iRow][$iCol] = 0
 			Else
-				;замер цвета квадратика
+				;cell color probe
 				$iX = $iCornerX + ($iCol * 40) + $iDeltaX
 				$iY = $iCornerY + ($iRow * 40) + $iDeltaY
 				$iPixelColor = Mod(DllStructGetData($tBits, 1, $iY * $Size[0] + $iX), 0x1000000)
@@ -130,7 +128,6 @@ Func _GetField(ByRef $aiField)									;получение массива цветов поля
 		Next
 	Next
 
-	;удаление данных для избежаня утечки памяти
 	_WinAPI_DeleteObject($hBitmap)
 	_WinAPI_DeleteObject($hMemDC)
 	_WinAPI_DeleteObject($tBits)
@@ -138,8 +135,8 @@ Func _GetField(ByRef $aiField)									;получение массива цветов поля
 EndFunc
 
 
-Func _DoClick(ByRef $aiField)											;по информации о поле сделать(или не сделать) клик
-	;проверка на алмазы. Если клетка в 3 нижних рядах не определяет цвет 15 ходов, считаем ее алмазом и кликаем на нее
+Func _DoClick(ByRef $aiField)                                                ;using field information do(or not) click
+	;diamonds checkout; if cell in 3 bottom rows is undefined color for 15 turns, click it (it probably diamond)
 	For $iRow = $iNumRows - 1 to $iNumRows - 3 Step -1
 		For $iCol = 0 to $iNumCols - 1
 			If $aiField[$iRow][$iCol] <> 0 Then
@@ -155,7 +152,7 @@ Func _DoClick(ByRef $aiField)											;по информации о поле сделать(или не сде
 			EndIf
 		Next
 	Next
-	;поиск области одноцветных клеток
+	;search for field of same-color cells
 	For $iRow = $iNumRows - 1 to 0 Step -1
 		For $iCol = $iNumCols - 1 to 0 Step -1
 			If (Not($afJustClicked[$iRow][$iCol]) And $aiField[$iRow][$iCol] <> 0 And _DfsAreaSize($aiField, $iRow, $iCol) > 2) Then
@@ -172,18 +169,17 @@ Func _DoClick(ByRef $aiField)											;по информации о поле сделать(или не сде
 EndFunc
 
 
-Func _DfsAreaSize(ByRef $aiField, $iStartX, $iStartY)			;нерекурсивный алгоритм поиска размера одноцветной области
-																													;методом поиска в глубину
-	Local $aiResult[$iNumCols * $iNumRows][2]								;список клеток входящих в область
+Func _DfsAreaSize(ByRef $aiField, $iStartX, $iStartY)                       ;unrecursive algorithm for serching same-color fields by DFS
+	Local $aiResult[$iNumCols * $iNumRows][2]								;list of cells in field
 	Local $iResultSize = 0
-	Local $afMap[$iNumRows][$iNumCols]											;флаги пройденности
+	Local $afMap[$iNumRows][$iNumCols]                                      ;visit flags
 	For $iRow = 0 to $iNumRows - 1
 		For $iCol = 0 to $iNumCols - 1
 			$afMap[$iRow][$iCol] = False
 		Next
 	Next
 	$afMap[$iStartX][$iStartY] = True
-	Local $aiStack[$iNumRows * $iNumCols][2]								;активный стек
+	Local $aiStack[$iNumRows * $iNumCols][2]                                ;active stack
 	Local $iStackSize = 1
 	$aiStack[0][0] = $iStartX
 	$aiStack[0][1] = $iStartY
@@ -194,7 +190,7 @@ Func _DfsAreaSize(ByRef $aiField, $iStartX, $iStartY)			;нерекурсивный алгоритм 
 		$aiResult[$iResultSize][0] = $iX
 		$aiResult[$iResultSize][1] = $iY
 		$iResultSize += 1
-		For $iDirection = 0 to 3															;перебор 4 рядомстоящих клеток
+		For $iDirection = 0 to 3                                            ;look over 4 neighbour cells
 			Local $iNewX = $iX
 			Local $iNewY = $iY
 			Switch $iDirection
@@ -231,14 +227,14 @@ Func _DfsAreaSize(ByRef $aiField, $iStartX, $iStartY)			;нерекурсивный алгоритм 
 EndFunc
 
 
-While 1                 	;основной цикл
+While 1                                                  ;main loop
 	If $fActive Then
-		Sleep($iStepSleep)		;задержка, чтобы не кликало слишком быстро и не ошибалось
+		Sleep($iStepSleep)                               ;sleep for not clicking too fast and do many mistakes
 		Local $aiField[$iNumRows][$iNumCols]
 		_GetField($aiField)
 		_DoClick($aiField)
 	Else
-		Sleep(100)						;работа вхолостую, в ожидании начала
+		Sleep(100)                                       ;wait for start
 	EndIf
 WEnd
 
